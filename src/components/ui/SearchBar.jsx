@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "./Badge";
+import { priorityColors, statusColors } from "../../lib/utils";
 
 export const SearchBar = ({ currentUser }) => {
   const [query, setQuery] = useState("");
@@ -65,20 +66,6 @@ export const SearchBar = ({ currentUser }) => {
     navigate(`/tickets/${ticketId}`);
     setIsOpen(false);
     setQuery("");
-  };
-
-  const statusColors = {
-    open: "error",
-    pending: "warning",
-    resolved: "success",
-    closed: "default",
-  };
-
-  const priorityColors = {
-    low: "default",
-    medium: "warning",
-    high: "error",
-    urgent: "error",
   };
 
   return (
@@ -147,7 +134,7 @@ export const SearchBar = ({ currentUser }) => {
                         </Badge>
                       </div>
 
-                      <p className="mt-1 truncate text-sm text-gray-">
+                      <p className="mt-1 truncate text-sm text-gray-500">
                         {ticket.description}
                       </p>
                       <div className="mt-2 flex items-center space-x-3 text-xs text-gray-500">
@@ -158,7 +145,7 @@ export const SearchBar = ({ currentUser }) => {
                         <div className="flex items-center space-x-1">
                           <Clock className="size-3" />
                           <span>
-                            {new Date(ticket.createAt).toLocaleDateString()}
+                            {new Date(ticket.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
