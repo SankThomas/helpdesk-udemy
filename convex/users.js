@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { action, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const getCurrentUser = query({
@@ -54,5 +54,52 @@ export const getAllAgents = query({
       .collect();
 
     return agents;
+  },
+});
+
+export const getAllUsers = query({
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").order("desc").collect();
+    return users;
+  },
+});
+
+export const updateUserRole = mutation({
+  args: {
+    userId: v.id("users"),
+    role: v.union(v.literal("user"), v.literal("agent"), v.literal("admin")),
+  },
+  handler: async (ctx, { userId, role }) => {
+    await ctx.db.patch(userId, { role });
+  },
+});
+
+export const inviteUser = action({
+  args: {
+    email: v.string(),
+    role: v.union(v.literal("user"), v.literal("agent"), v.literal("admin")),
+  },
+  handler: async (_, args) => {
+    // eslint-disable-next-line no-undef
+    const clerkSecret = process.env.VITE_CLERK_SECRET_KEY;
+
+    if (!clerkSecret) throw new Error("Missing Clerk Secret Key");
+
+    const res = await fetch("https://api.clerk.com/v1/invitations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${clerkSecret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email_address: args.email,
+        public_metadata: { role: args.role },
+      }),
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(error);
+    }
   },
 });
