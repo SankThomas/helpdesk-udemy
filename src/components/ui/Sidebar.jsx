@@ -9,6 +9,7 @@ import {
   HelpingHand,
   BarChart3,
 } from "lucide-react";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 const navigation = [
   {
@@ -57,6 +58,7 @@ const navigation = [
 
 export const Sidebar = ({ isOpen, onToggle, userRole = "user" }) => {
   const location = useLocation();
+  const { currentUser } = useCurrentUser();
 
   const filteredNavigation = navigation.filter((item) =>
     item.roles.includes(userRole),
@@ -77,14 +79,25 @@ export const Sidebar = ({ isOpen, onToggle, userRole = "user" }) => {
       >
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-gray-800 px-2 py-4">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="bg-primary-600 flex size-8 items-center justify-center rounded-lg shadow-lg">
-                <HelpingHand className="size-5 text-white" />
-              </div>
-              <span className="text-lg! font-semibold text-gray-100">
-                Helpdesk
-              </span>
-            </Link>
+            {currentUser ? (
+              <Link to="/dashboard" className="flex items-center space-x-2">
+                <div className="bg-primary-600 flex size-8 items-center justify-center rounded-lg shadow-lg">
+                  <HelpingHand className="size-5 text-white" />
+                </div>
+                <span className="text-lg! font-semibold text-gray-100">
+                  Helpdesk
+                </span>
+              </Link>
+            ) : (
+              <Link to="/" className="flex items-center space-x-2">
+                <div className="bg-primary-600 flex size-8 items-center justify-center rounded-lg shadow-lg">
+                  <HelpingHand className="size-5 text-white" />
+                </div>
+                <span className="text-lg! font-semibold text-gray-100">
+                  Helpdesk
+                </span>
+              </Link>
+            )}
 
             <button
               onClick={onToggle}
