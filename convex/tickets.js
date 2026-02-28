@@ -1,6 +1,52 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+export const getTickets = query({
+  args: {
+    userId: v.optional(v.id("users")),
+    userRole: v.string(),
+    status: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    assignedTo: v.optional(v.id("users")),
+  },
+  handler: async (ctx, { userId, userRole, status, priority, assignedTo }) => {
+    let query = ctx.db.query("tickets");
+
+    if (userRole === "user") {
+      query = query.withIndex("by_user", (q) => q.eq("userId", userId));
+    }
+
+    let tickets = await query.collect();
+
+    if (status) {
+      tickets = tickets.filter((ticket) => ticket.status === status);
+    }
+    if (priority) {
+      tickets = tickets.filter((ticket) => ticket.priority === priority);
+    }
+    if (assignedTo) {
+      tickets = tickets.filter((ticket) => ticket.assignedTo === assignedTo);
+    }
+
+    const ticketWithUsers = await Promise.all(
+      tickets.map(async (ticket) => {
+        const user = await ctx.db.get(ticket.userId);
+        const assignedUser = ticket.assignedTo
+          ? await ctx.db.get(ticket.assignedTo)
+          : null;
+
+        return {
+          ...ticket,
+          user,
+          assignedUser,
+        };
+      }),
+    );
+
+    return ticketWithUsers.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+});
+
 export const createTicket = mutation({
   args: {
     title: v.string(),
