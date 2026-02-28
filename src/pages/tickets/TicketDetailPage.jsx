@@ -14,20 +14,7 @@ import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
-
-const statusColors = {
-  open: "error",
-  pending: "warning",
-  resolved: "success",
-  closed: "default",
-};
-
-const priorityColors = {
-  low: "default",
-  medium: "warning",
-  high: "error",
-  urgent: "error",
-};
+import { priorityColors, statusColors } from "../../lib/utils";
 
 export const TicketDetailPage = () => {
   const { ticketId } = useParams();
