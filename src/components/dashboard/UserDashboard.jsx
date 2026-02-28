@@ -112,9 +112,9 @@ export const UserDashboard = ({ user }) => {
 
         <CardContent>
           {recentTickets.length === 0 ? (
-            <div clasName="py-8 text-center">
+            <div className="py-8 text-center">
               <Ticket className="mx-auto mb-3 size-12 text-gray-400" />
-              <p className="mb-4 text-gray-500">No tickets yet</p>
+              <p className="text-gray-500 mb-3">No tickets yet</p>
 
               <Link to="/tickets/new">
                 <Button>Create your first ticket</Button>

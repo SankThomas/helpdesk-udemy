@@ -114,9 +114,12 @@ export const AdminDashboard = ({ user }) => {
           <CardContent className="space-y-4">
             {recentTickets.length === 0 ? (
               <div className="py-8 text-center">
-                <Ticket className="mx-auto mb-3 size-12 text-gray-400">
-                  <p className="text-gray-500">No tickets yet</p>
-                </Ticket>
+                <Ticket className="mx-auto mb-3 size-12 text-gray-400" />
+                <p className="text-gray-500 mb-3">No tickets yet</p>
+
+                <Link to="/tickets/new">
+                  <Button>Create your first ticket</Button>
+                </Link>
               </div>
             ) : (
               recentTickets.map((ticket) => (
