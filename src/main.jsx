@@ -21,7 +21,7 @@ createRoot(document.getElementById("root")).render(
       <ConvexProvider client={convex}>
         <BrowserRouter>
           <App />
-          <Toaster richColors />
+          <Toaster richColors closeButton position="top-center" />
         </BrowserRouter>
       </ConvexProvider>
     </ClerkProvider>
