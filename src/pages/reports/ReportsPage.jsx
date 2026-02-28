@@ -1,5 +1,371 @@
-import React from "react";
+import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Card, CardHeader, CardContent } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Select } from "../../components/ui/Select";
+import {
+  BarChart3,
+  TrendingUp,
+  Users,
+  Download,
+  Calendar,
+  Target,
+} from "lucide-react";
+import { AlignRight } from "lucide-react";
 
 export const ReportsPage = () => {
-  return <div>ReportsPage</div>;
+  const [dateRange, setDateRange] = useState("7");
+  const [reportType, setReportType] = useState("overview");
+
+  const allTickets = useQuery(api.tickets.getTickets, { userRole: "admin" });
+  const allUsers = useQuery(api.users.getAllUsers);
+
+  const now = new Date().getTime();
+  const daysAgo = parseInt(dateRange) * 24 * 60 * 60 * 1000;
+  const startDate = now - daysAgo;
+
+  const recentTickets =
+    allTickets?.filter((ticket) => ticket.createdAt >= startDate) || [];
+  const resolvedTickets = recentTickets.filter(
+    (ticket) => ticket.status === "resolved",
+  );
+
+  const metrics = {
+    totalTickets: recentTickets.length,
+    resolvedTickets: resolvedTickets.length,
+    resolutionRate:
+      recentTickets.length > 0
+        ? Math.round((resolvedTickets.length / recentTickets.length) * 100)
+        : 0,
+    avgResponseTime: "2.5 hours",
+    activeUsers: allUsers?.filter((u) => u.role !== "admin").legnth || 0,
+  };
+
+  const statusCounts = {
+    open: recentTickets.filter((t) => t.status === "open").length,
+    pending: recentTickets.filter((t) => t.status === "pending").length,
+    resolved: recentTickets.filter((t) => t.status === "resolved").length,
+    closed: recentTickets.filter((t) => t.status === "closed").length,
+  };
+
+  const priorityCounts = {
+    low: recentTickets.filter((t) => t.priority === "low").length,
+    medium: recentTickets.filter((t) => t.priority === "medium").length,
+    high: recentTickets.filter((t) => t.priority === "high").length,
+    urgent: recentTickets.filter((t) => t.priority === "urgent").length,
+  };
+
+  const dailyTickets = [];
+  for (let i = 6; i >= 0; i--) {
+    const dayStart = now - i * 24 * 60 * 60 * 1000;
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    const dayTickets = recentTickets.filter(
+      (t) => t.createdAt >= dayStart && t.createdAt < dayEnd,
+    );
+
+    dailyTickets.push({
+      date: new Date(dayStart).toLocaleDateString("en-US", {
+        weekday: "short",
+      }),
+      count: dayTickets.length,
+    });
+  }
+
+  const maxDailyCount = Math.max(...dailyTickets.map((d) => d.count), 1);
+
+  const handleExport = () => {
+    if (!recentTickets || recentTickets.length === 0) {
+      alert("No tickets to export for the selected date range");
+      return;
+    }
+
+    const headers = [
+      "Date",
+      "Ticket ID",
+      "Title",
+      "Status",
+      "Priority",
+      "Assigned To",
+    ];
+    const rows = recentTickets.map((ticket) => [
+      new Date(ticket.createdAt).toLocaleDateString("en-US"),
+      ticket._id.slice(-8),
+      ticket.title || "",
+      ticket.status,
+      ticket.priority,
+      (ticket.assignedUser && ticket.assignedUser.name) || "Unassigned",
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `helpdesk-report-${dateRange}days.csv`;
+    a.click();
+    document.body.removeChild(a);
+
+    window.URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Reports & Analytics
+          </h1>
+          <p className="text-gray-600">Track performance and analyze trends</p>
+        </div>
+
+        <Button onClick={handleExport} className="flex items-center space-x-2">
+          <Download className="size-4" />
+          <span>Export CSV</span>
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Select
+              label="Date Range"
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+            >
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </Select>
+
+            <Select
+              label="Report Type"
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+            >
+              <option value="overview">Overview</option>
+              <option value="performance">Performance</option>
+              <option value="trends">Trends</option>
+            </Select>
+
+            <div className="flex items-end">
+              <Button variant="outline" className="w-full">
+                <Calendar className="mr-2 size-4" />
+                Custom Range
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <BarChart3 className="text-primary-600 size-8" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Total Tickets
+                </p>
+                <p className="text-2xl! font-bold text-gray-90">
+                  {metrics.totalTickets}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Target className="text-green-600 size-8" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Resolution Rate
+                </p>
+                <p className="text-2xl! font-bold text-gray-90">
+                  {metrics.resolutionRate}%
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="text-secondary-600 size-8" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Active Users
+                </p>
+                <p className="text-2xl! font-bold text-gray-90">
+                  {metrics.activeUsers}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Ticket Status Distribution
+            </h2>
+          </CardHeader>
+
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(statusCounts).map(([status, count]) => {
+                const percentage =
+                  metrics.totalTickets > 0
+                    ? Math.round((count / metrics.totalTickets) * 100)
+                    : 0;
+                const colors = {
+                  open: "bg-rose-500",
+                  pending: "bg-red-500",
+                  resolved: "bg-green-500",
+                  closed: "bg-gray-400",
+                };
+
+                return (
+                  <div
+                    key={status}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`size-3 rounded-full ${colors[status]}`}
+                      />
+                      <span className="font-medium text-gray-900 capitalize">
+                        {status}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <div className="h-2 w-24 rounded-full bg-gray-200">
+                        <div
+                          className={`h-2 rounded-full ${colors[status]}`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="w-12 tet-right text-sm font-medium text-gray-900">
+                        {count} ({percentage}%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Priority Distribution
+            </h2>
+          </CardHeader>
+
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(priorityCounts).map(([priority, count]) => {
+                const percentage =
+                  metrics.totalTickets > 0
+                    ? Math.round((count / metrics.totalTickets) * 100)
+                    : 0;
+                const colors = {
+                  low: "bg-gray-400",
+                  medium: "bg-red-500",
+                  high: "bg-rose-500",
+                  urgent: "bg-rose-600",
+                };
+
+                return (
+                  <div
+                    key={priority}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`size-3 rounded-full ${colors[priority]}`}
+                      />
+                      <span className="font-medium text-gray-900 capitalize">
+                        {priority}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <div className="h-2 w-24 rounded-full bg-gray-200">
+                        <div
+                          className={`h-2 rounded-full ${colors[priority]}`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="w-12 tet-right text-sm font-medium text-gray-900">
+                        {count} ({percentage}%)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Ticket Creation Trends
+            </h2>
+
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="size-4 text-green-600" />
+              <span className="text-sm font-medium text-green-600">
+                {dailyTickets.reduce((sum, day) => sum + day.count, 0)} tickets
+                this week
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid h-32 grid-cols-7 gap-2">
+              {dailyTickets.map((day, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col items-center justify-end space-y-2"
+                >
+                  <div
+                    className="bg-primary-500 hover:bg-primary-600 w-full rounded-t-sm transition-all duration-300"
+                    style={{
+                      height: `${(day.count / maxDailyCount) * 100}%`,
+                      minHeight: day.count > 0 ? "8px" : "2px",
+                    }}
+                  ></div>
+                  <span className="text-xs font-medium text-gray-600">
+                    {day.date}
+                  </span>
+                  <span className="text-xs text-gray-500">{day.count}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center text-sm text-gray-500">
+              Daily ticket creation over the last 7 days
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
